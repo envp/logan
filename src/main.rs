@@ -13,38 +13,27 @@ fn get_matches<R: Read>(pattern: Regex, istream: R) -> Vec<String> {
     let reader = BufReader::new(istream);
 
     for line in reader.lines() {
-        match line {
-            Ok(text) => 
-                match pattern.find(&text) {
-                    Some(_) => matched_lines.push(text),
-                    None => (),
-                }
-,
-            Err(_) => panic!("Error during read"),
+        let text = line.unwrap();
+        if pattern.find(&text).is_some() {
+            matched_lines.push(text)
         }
     }
     matched_lines
 }
 
 /// This should probably return Result<usize>
-fn put_matches<W: Write>(lines: Vec<String>, ostream: W) -> usize {
+fn put_matches<W: Write>(lines: Vec<String>, ostream: W) -> Result<(), std::io::Error> {
     let mut writer = BufWriter::new(ostream);
 
-    // What do I even use this for
-    let mut num_bytes = 0;
-
     for line in lines {
-        num_bytes += match writer.write(line.as_bytes()) {
-            Ok(n) => n,
-            Err(err) => panic!(format!("Error occured writing to output file\n{:?}", err)),
-        };
-        let _ = writer.write_all(b"\n");
+        writer.write(line.as_bytes())?;
+        writer.write_all(b"\n")?;
     }
-    num_bytes
+    Ok(())
 }
 
 fn main() {
     let opts = ProgramOptions::from_args();
     let matches = get_matches(opts.pattern, opts.input);
-    put_matches(matches, opts.output);
+    put_matches(matches, opts.output).expect(&"Error during write!");
 }
