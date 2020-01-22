@@ -1,14 +1,17 @@
 mod commandline;
 use commandline::ProgramOptions;
 
+use log;
+use env_logger;
 use regex::Regex;
+
 use std::io::{BufRead, BufReader, BufWriter, Read, Write};
 use std::string::String;
 use std::vec::Vec;
 use structopt::StructOpt;
 
 /// Return the lines that match our regex
-fn get_matches<R: Read>(pattern: Regex, istream: R) -> Vec<String> {
+fn get_matches(pattern: Regex, istream: impl Read) -> Vec<String> {
     let mut matched_lines: Vec<String> = Vec::new();
     let reader = BufReader::new(istream);
 
@@ -21,8 +24,8 @@ fn get_matches<R: Read>(pattern: Regex, istream: R) -> Vec<String> {
     matched_lines
 }
 
-/// This should probably return Result<usize>
-fn put_matches<W: Write>(lines: Vec<String>, ostream: W) -> Result<(), std::io::Error> {
+/// Write matched lines back to the given output stream
+fn put_matches(lines: Vec<String>, ostream: impl Write) -> Result<(), std::io::Error> {
     let mut writer = BufWriter::new(ostream);
 
     for line in lines {
@@ -33,7 +36,9 @@ fn put_matches<W: Write>(lines: Vec<String>, ostream: W) -> Result<(), std::io::
 }
 
 fn main() {
+    env_logger::init();
     let opts = ProgramOptions::from_args();
+    log::debug!("Using {:?}", opts);
     let matches = get_matches(opts.pattern, opts.input);
-    put_matches(matches, opts.output).expect(&"Error during write!");
+    put_matches(matches, opts.output).expect(&"Error writing results");
 }
